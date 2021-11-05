@@ -8,7 +8,7 @@ from datetime import date
 import ssl
 from librouteros import connect
 import paramiko
-import pymysql
+import pymysql.cursors
 from flask_sqlalchemy import SQLAlchemy
 
 
@@ -19,31 +19,30 @@ app.config['SECRET_KEY'] = '0af158fc013329a0492cc929d3fbee02'
 #session handlers
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
-Session(app)
-#database
-userpass = 'mysql+pymysql://root:@'
-basedir  = '127.0.0.1'
-dbname   = '/mikrotik_api'
-socket   = '?unix_socket=/opt/lampp/var/mysql/mysql.sock'
-dbname   = dbname + socket
-app.config['SQLALCHEMY_DATABASE_URI'] = userpass + basedir + dbname
 
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
-
-db = SQLAlchemy(app)
+# Connect to the database
+connection = pymysql.connect(host='localhost',
+                             user='root',
+                             password='',
+                             database='mikrotik_api',
+                             cursorclass=pymysql.cursors.DictCursor)
 
 # creating the date object of today's date
 todays_date = date.today()
 
+# with connection:
+#     with connection.cursor() as cursor:
+#         # Create a new record
+#         sql = "INSERT INTO `users` (`email`, `password`) VALUES (%s, %s)"
+#         cursor.execute(sql, ('webmaster@python.org', 'very-secret'))
 
+#     # connection is not autocommit by default. So you must commit to save
+#     # your changes.
+#     connection.commit()
 @app.route('/')
 def index():
-    msg = ''
     if session.get('username'):
-        if db.session.query('1').from_statement('SELECT 1').all():
-            msg = 'It works.'
-        else:
-            msg =  'Something is broken.'
+        msg = 'connected'
         return render_template('index.html',username = session["username"],msg=msg)
     return redirect(url_for('login'))
 
@@ -51,20 +50,21 @@ def index():
 def login():
     date = todays_date.year
     if request.method == 'POST' and len(request.form['username']) > 0:
-        # user = User.query.get(form.email.data)
-        # if user:
-        #     if bcrypt.check_password_hash(user.password, form.password.data):
-        #         user.authenticated = True
-        #         db.session.add(user)
-        #         db.session.commit()
-        #         login_user(user, remember=True)
-        session['username'] = request.form['username']
-        #api = connect(username='admin', password='', host='127.0.0.1')
-        #ip_info = api(cmd="/ip/address/print")
+        with connection.cursor() as cursor:
+            # Read a single record
+            sql = "SELECT `id`, `password` FROM `users` WHERE `username`=%s AND `password`=%s"
+            cursor.execute(sql, (request.form['username'], request.form['password']))
+            result = cursor.fetchone()
+            if result == None: 
+                return render_template('login.html',date=date)
+            else:
+                session['username'] = request.form['username']
+                #api = connect(username='admin', password='', host='127.0.0.1')
+                #ip_info = api(cmd="/ip/address/print")
 
-        #for item in ip_info:
-            #print(item)
-        return redirect(url_for('index'))
+                #for item in ip_info:
+                    #print(item)
+                return redirect(url_for('index'))
     else:
         return render_template('login.html',date=date)
 

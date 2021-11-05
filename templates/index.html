@@ -14,12 +14,27 @@
 {% block content %}
 <div class="container-fluid">
    <div class="row mt-5">
-       <div class="col-12 col-sm-4 offset-sm-8">
+       <div class="col-12 col-sm-8">
+        <div class="row">
+          <div class="col-sm-6 col-12">
+            <div class="card">
+              <div class="card-header">
+                IP Address List
+              </div>
+              <div class="card-body">
+                <p class="card-text">With supporting text below as a natural lead-in to additional content.</p>
+                <a href="#" class="btn btn-primary">Go somewhere</a>
+              </div>
+            </div>
+          </div>
+        </div>
+        </div>
+       <div class="col-12 col-sm-4">
         <div class="card">
             <div class="card-header">Account Setting</div>
             <div class="card-body">
-              <p class="card-text">Account Username : {{ username}}.</p>
-              <p class="card-text">DB Connection: {{ msg }}</p>
+              <p class="card-text">Account Username :<span class="ms-3 text-dark"> {{ username}}</span></p>
+              <p class="card-text">DB Connection: <span class="ms-3 text-success">{{ msg }}</span></p>
             </div>
           </div>
        </div>
