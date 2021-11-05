@@ -2,9 +2,12 @@
 # -*- coding: latin-1 -*-
 import sys, posix, time, binascii, socket, select, ssl
 import hashlib
-from flask import Flask, render_template, redirect, url_for
+from flask import Flask, render_template, redirect, url_for, request, session
 from datetime import date
-import resources
+import ssl
+from librouteros import connect
+import paramiko
+
 
 app = Flask(__name__)
 app.env = "Development"
@@ -15,71 +18,44 @@ app.config['SECRET_KEY'] = '0af158fc013329a0492cc929d3fbee02'
 # creating the date object of today's date
 todays_date = date.today()
 
-def open_socket(dst, port, secure=False):
-  s = None
-  res = socket.getaddrinfo(dst, port, socket.AF_UNSPEC, socket.SOCK_STREAM)
-  af, socktype, proto, canonname, sockaddr = res[0]
-  skt = socket.socket(af, socktype, proto)
-  if secure:
-    s = ssl.wrap_socket(skt, ssl_version=ssl.PROTOCOL_TLSv1_2, ciphers="ADH-AES128-SHA256") #ADH-AES128-SHA256
-  else:
-    s = skt
-  s.connect(sockaddr)
-  return print(s)
 
 @app.route('/')
 def index():
+    if 'username' in session:
+        return render_template('index.html',username = session["username"])
     return redirect(url_for('login'))
 
-@app.route("/login")
+@app.route("/login",methods=['POST','GET'])
 def login():
     date = todays_date.year
-    s = None
-    dst = '127.0.0.1'
-    user = "admin"
-    passw = ""
-    secure = False
-    port = 0
+    if request.method == 'POST':
+        session['username'] = request.form['username']
+        #api = connect(username='admin', password='', host='127.0.0.1')
+        #ip_info = api(cmd="/ip/address/print")
 
-    # use default username and pasword if not specified
-    
-    user = "admin"
-    passw = ""
-    print(str(dst)+""+str(port)+""+str(secure))
-    if (port==0):
-      port = 8080 if secure else 8728
+        #for item in ip_info:
+            #print(item)
+        return redirect(url_for('index'))
+    else:
+        return render_template('login.html',date=date)
 
-    s = open_socket(dst, port, secure)
-    
-    if s is None:
-      print ('could not open socket')
-      sys.exit(1)
+@app.route('/logout')
+def logout():
+    # remove the username from the session if it's there
+    session.pop('username', None)
+    return redirect(url_for('login'))
 
-    apiros = resources.ApiRos(s)
-    if not apiros.login(user, passw):
-      return
+@app.route("/dashboard")
+def dashboard():
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.connect('192.168.0.110', username='admin', password='')
+    stdin, stdout, stderr = client.exec_command('ip address print')
 
-    inputsentence = []
+    for line in stdout:
+        print(line.strip('\n'))
+    client.close()
 
-    while 1:
-        r = select.select([s, sys.stdin], [], [], None)
-        if s in r[0]:
-            # something to read in socket, read sentence
-            x = apiros.readSentence()
-
-        if sys.stdin in r[0]:
-            # read line from input and strip off newline
-            l = sys.stdin.readline()
-            l = l[:-1]
-
-            # if empty line, send sentence and start with new
-            # otherwise append to input sentence
-            if l == '':
-                apiros.writeSentence(inputsentence)
-                inputsentence = []
-            else:
-                inputsentence.append(l)
-    return render_template('login.html',date=date,inputsentence=inputsentence)
 
 if __name__ == '__main__':
    app.run()
