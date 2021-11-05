@@ -8,15 +8,29 @@ from datetime import date
 import ssl
 from librouteros import connect
 import paramiko
+import pymysql
+from flask_sqlalchemy import SQLAlchemy
 
 
 app = Flask(__name__)
 app.env = "Development"
 app.debug = "True"
 app.config['SECRET_KEY'] = '0af158fc013329a0492cc929d3fbee02'
+#session handlers
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
+#database
+userpass = 'mysql+pymysql://root:@'
+basedir  = '127.0.0.1'
+dbname   = '/mikrotik_api'
+socket   = '?unix_socket=/opt/lampp/var/mysql/mysql.sock'
+dbname   = dbname + socket
+app.config['SQLALCHEMY_DATABASE_URI'] = userpass + basedir + dbname
+
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
+
+db = SQLAlchemy(app)
 
 # creating the date object of today's date
 todays_date = date.today()
@@ -24,8 +38,13 @@ todays_date = date.today()
 
 @app.route('/')
 def index():
+    msg = ''
     if session.get('username'):
-        return render_template('index.html',username = session["username"])
+        if db.session.query('1').from_statement('SELECT 1').all():
+            msg = 'It works.'
+        else:
+            msg =  'Something is broken.'
+        return render_template('index.html',username = session["username"],msg=msg)
     return redirect(url_for('login'))
 
 @app.route("/login",methods=['POST','GET'])
