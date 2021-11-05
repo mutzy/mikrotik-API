@@ -1,18 +1,27 @@
 {% extends "base.html" %}
 
-{% block title %} Login {% endblock %}
+{% block title %} Dashboard {% endblock %}
 {% block head %}
   {{ super()}}
   
   <style>
     body{
-      background-color:cyan;
+      background-color:aliceblue;
       font-family: 'Roboto', sans-serif;
     }
   </style>
 {% endblock %}
 {% block content %}
 <div class="container-fluid">
-    {{ username }}
+   <div class="row mt-5">
+       <div class="col-12 col-sm-4 offset-sm-8">
+        <div class="card">
+            <div class="card-header">Account Setting</div>
+            <div class="card-body">
+              <p class="card-text">Account Username : {{ username}}.</p>
+            </div>
+          </div>
+       </div>
+   </div> 
 </div>
 {% endblock %}
